@@ -1,5 +1,10 @@
 // ============================================================================
 // ADAForge — Registry de tipos de AdvancedDungeonArena (8.5.x)
+//
+// Apunta al FORK de DamianLR1 (github.com/DamianLR1/advanced-dugeon-arena),
+// que es 8.5.1 + agregados. Todo lo del fork está marcado con "[fork]" para
+// que se sepa qué no existe en el plugin oficial.
+//
 // Fuente: código fuente Java real del plugin (Core/src), NO la wiki pública
 // (la wiki está incompleta: lista ~10 conditions / ~14 actions, el plugin
 // real tiene 21 conditions -incl. 6 deprecadas- y 16 actions).
@@ -90,10 +95,13 @@ export const VAR_OPERATIONS: SelectOption[] = [
   { value: 'SET', label: 'Establecer (=)' },
 ];
 
+// Los 5 que registra ScaleBaseRegistry.load(). Los dos últimos son del fork.
 export const SCALE_BASES: SelectOption[] = [
   { value: 'player_amount', label: 'Cantidad de jugadores' },
   { value: 'alive_player_amount', label: 'Jugadores vivos' },
   { value: 'dead_player_amount', label: 'Jugadores muertos' },
+  { value: 'average_level', label: '[fork] Nivel promedio del grupo' },
+  { value: 'difficulty', label: '[fork] Dificultad (variable "difficulty")' },
 ];
 
 export const SCALE_TYPES: SelectOption[] = [
@@ -389,6 +397,14 @@ export const ACTIONS: TypeDef[] = [
       { key: 'Amount', label: 'Cantidad', type: 'scalable_amount' },
       { key: 'Level', label: 'Nivel del mob', type: 'scalable_amount' },
     ],
+  },
+  {
+    id: 'clear_mobs',
+    label: '[fork] Limpiar mobs',
+    desc:
+      'Elimina TODOS los mobs de la dungeon sin contarlos como kills, así no disparan ' +
+      'objetivos ni recompensas. Útil al cerrar un stage. No tiene parámetros.',
+    fields: [],
   },
   {
     id: 'dungeon_end',

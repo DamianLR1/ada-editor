@@ -1,5 +1,5 @@
 import { useMemo, useRef, useState } from 'react';
-import { FolderOpen, Download, Swords, Plus, Settings, Trash2, Shield, Ghost, ShieldCheck, GitBranch } from 'lucide-react';
+import { FolderOpen, Download, Swords, Plus, Settings, Trash2, Shield, Ghost, ShieldCheck, GitBranch, BookOpen } from 'lucide-react';
 import type { DungeonProject } from './schema/project';
 import { emptyProject } from './schema/project';
 import { newEmptyFile } from './yaml/parser';
@@ -18,6 +18,7 @@ import { LootChestEditorView } from './components/LootChestEditorView';
 import { GlobalEntityForm } from './components/GlobalEntityForm';
 import { ValidationView } from './components/ValidationView';
 import { FlowView } from './components/FlowView';
+import { ForkReferenceView } from './components/ForkReferenceView';
 import { validateProject } from './lib/validate';
 import { computeFlow } from './lib/flow';
 
@@ -30,7 +31,8 @@ type Selection =
   | { type: 'reward'; index: number }
   | { type: 'lootchest'; index: number }
   | { type: 'kit'; index: number }
-  | { type: 'mobtemplate'; index: number };
+  | { type: 'mobtemplate'; index: number }
+  | { type: 'reference' };
 
 export default function App() {
   const [project, setProject] = useState<DungeonProject | null>(null);
@@ -280,6 +282,17 @@ export default function App() {
           )}
 
           <div>
+            <button
+              onClick={() => setSelection({ type: 'reference' })}
+              className={`w-full flex items-center gap-2 rounded-md px-3 py-2 text-sm text-left ${
+                selection.type === 'reference' ? 'bg-amber-500/15 text-amber-300' : 'text-zinc-300 hover:bg-zinc-900'
+              }`}
+            >
+              <BookOpen size={15} /> Referencia del fork
+            </button>
+          </div>
+
+          <div>
             <p className="text-xs uppercase tracking-wide text-zinc-500 font-semibold px-1 mb-1">Globales (fuera de la dungeon)</p>
             <input
               ref={kitsInputRef}
@@ -338,6 +351,8 @@ export default function App() {
               Mob Templates globales desde el panel de la izquierda sin necesidad de una dungeon abierta.
             </div>
           )}
+
+          {selection.type === 'reference' && <ForkReferenceView />}
 
           {project && selection.type === 'config' && (
             <DungeonConfigForm raw={project.configRaw} onChange={(raw) => setProject({ ...project, configRaw: raw })} />

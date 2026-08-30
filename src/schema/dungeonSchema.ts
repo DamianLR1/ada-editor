@@ -88,6 +88,14 @@ export const DUNGEON_GAME_FIELDS: FieldDef[] = [
   { key: 'Game.Scoreboard.Enabled', label: 'Scoreboard propio activado', type: 'boolean', default: false },
   { key: 'Game.Scoreboard.Id', label: 'ID del scoreboard', type: 'text' },
 
+  {
+    key: 'Game.BossBar.Enabled',
+    label: '[fork] Bossbar de objetivos',
+    type: 'boolean',
+    default: true,
+    desc: 'Muestra el objetivo pendiente en una barra arriba de la pantalla, en vez de obligar a mirar el scoreboard.',
+  },
+
   { key: 'Game.VanillaFeatures.Exhaust.Enabled', label: 'Hambre activada', type: 'boolean', default: true },
   { key: 'Game.VanillaFeatures.HealthRegain.Enabled', label: 'Regeneración de vida activada', type: 'boolean', default: true },
   { key: 'Game.VanillaFeatures.HealthRegain.DisabledFrom.Food', label: 'Bloquear regeneración por comida', type: 'boolean', default: false },
