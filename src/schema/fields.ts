@@ -129,6 +129,32 @@ function writeAttributeScaleMap(value: Record<string, { initial: number; perLeve
 }
 
 // ---------------------------------------------------------------------------
+// Spawners (Spawners.<id>.Positions -> lista de "x,y,z")
+//
+// El plugin (DungeonMobSpawner.read) lee las posiciones bajo una clave
+// "Positions", NO como lista directa del id. En la UI se maneja como un
+// map de id -> lista para no exponer esa capa de más.
+// ---------------------------------------------------------------------------
+
+function readSpawners(raw: any): Record<string, string[]> {
+  if (!raw || typeof raw !== 'object') return {};
+  const out: Record<string, string[]> = {};
+  Object.keys(raw).forEach((id) => {
+    const positions = raw[id]?.Positions;
+    out[id] = Array.isArray(positions) ? positions.map((p: unknown) => String(p)) : [];
+  });
+  return out;
+}
+
+function writeSpawners(value: Record<string, string[]>): any {
+  const out: Record<string, any> = {};
+  Object.keys(value || {}).forEach((id) => {
+    out[id] = { Positions: value[id] || [] };
+  });
+  return out;
+}
+
+// ---------------------------------------------------------------------------
 // API genérica por FieldDef
 // ---------------------------------------------------------------------------
 
@@ -143,6 +169,8 @@ export function defaultFieldValue(field: FieldDef): any {
     case 'map_number':
       return field.default ?? {};
     case 'map_string_list':
+      return field.default ?? {};
+    case 'spawners':
       return field.default ?? {};
     case 'map_text':
       return field.default ?? {};
@@ -173,6 +201,9 @@ export function readFieldValue(field: FieldDef, rawSection: Record<string, any>)
   if (field.type === 'attribute_scale_map') {
     return readAttributeScaleMap(getNested(rawSection, field.key));
   }
+  if (field.type === 'spawners') {
+    return readSpawners(getNested(rawSection, field.key));
+  }
   const v = getNested(rawSection, field.key);
   return v === undefined ? defaultFieldValue(field) : v;
 }
@@ -188,6 +219,10 @@ export function writeFieldValue(field: FieldDef, rawSection: Record<string, any>
   }
   if (field.type === 'attribute_scale_map') {
     setNested(rawSection, field.key, writeAttributeScaleMap(value));
+    return;
+  }
+  if (field.type === 'spawners') {
+    setNested(rawSection, field.key, writeSpawners(value));
     return;
   }
   setNested(rawSection, field.key, value);

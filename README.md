@@ -22,12 +22,18 @@ al exportar, así que no perdés nada.
 
 ## Lo que trae
 
+- **Resumen del proyecto.** Un panel con todo de un vistazo: stages, niveles, scripts, acciones,
+  tareas, spawners, tamaño de la región, mobs que spawnea, variables y estado de la validación.
+- **Mapa de la dungeon.** Vista cenital con la región, el lobby, cada spawner y cada loot chest en
+  su posición real. Lo que quedó fuera de la región se marca en rojo, que es el error de config más
+  típico y el más difícil de ver leyendo YAML.
+- **Diagrama de flujo.** El recorrido de stages y levels dibujado en columnas por profundidad, con
+  las probabilidades y condiciones de cada salto. Los nodos inalcanzables salen punteados.
 - **Formularios generados desde un registry.** `src/schema/registry.ts` es la única fuente de verdad:
   21 conditions, 17 actions y 6 tasks, con los nombres de campo exactos que espera el plugin. Está
   sacado del código Java real, no de la wiki (que está incompleta).
 - **Validación cruzada.** Detecta referencias rotas antes de subir nada: `StageId`, `LevelId`,
   `RewardId`, `SpotId`, `SpawnerId`, `TaskId` y variables usadas sin definir.
-- **Vista de flujo.** El recorrido de stages y levels, para ver de un vistazo cómo encadena todo.
 - **Referencia del fork.** Comandos, placeholders, records, permisos y claves de lang que agrega el
   fork, buscables, sin salir de la página.
 
@@ -40,6 +46,7 @@ scalers `average_level` y `difficulty`, y la bossbar de objetivos.
 npm install
 npm run dev      # servidor local
 npm run build    # genera dist/
+npm run check    # self-check de la logica pura (mapa, flujo, resumen, spawners)
 npm run lint
 ```
 

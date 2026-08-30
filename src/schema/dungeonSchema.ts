@@ -22,8 +22,10 @@ export const DUNGEON_SPAWNERS_FIELDS: FieldDef[] = [
   {
     key: 'Spawners',
     label: 'Grupos de spawners',
-    type: 'map_string_list',
-    desc: 'Cada grupo tiene un ID (referenciado por SpawnerId en la acción spawn_mob) y una o más posiciones "x,y,z".',
+    type: 'spawners',
+    desc:
+      'Cada grupo tiene un ID (el que referenciás con SpawnerId en la acción spawn_mob) y una o más posiciones ' +
+      '"x,y,z". El plugin elige una al azar en cada spawn. Se ven dibujadas en el Mapa.',
   },
 ];
 

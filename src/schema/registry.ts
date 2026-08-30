@@ -26,6 +26,7 @@ export type FieldType =
   | 'var_definitions'
   | 'map_number'
   | 'map_string_list'
+  | 'spawners'
   | 'map_text'
   | 'attribute_scale_map';
 

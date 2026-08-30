@@ -1,5 +1,5 @@
 import { useMemo, useRef, useState } from 'react';
-import { FolderOpen, Download, Swords, Plus, Settings, Trash2, Shield, Ghost, ShieldCheck, GitBranch, BookOpen } from 'lucide-react';
+import { FolderOpen, Download, Swords, Plus, Settings, Trash2, Shield, Ghost, ShieldCheck, GitBranch, BookOpen, LayoutDashboard, Map as MapIcon } from 'lucide-react';
 import type { DungeonProject } from './schema/project';
 import { emptyProject } from './schema/project';
 import { newEmptyFile } from './yaml/parser';
@@ -19,10 +19,20 @@ import { GlobalEntityForm } from './components/GlobalEntityForm';
 import { ValidationView } from './components/ValidationView';
 import { FlowView } from './components/FlowView';
 import { ForkReferenceView } from './components/ForkReferenceView';
+import { WelcomeView } from './components/WelcomeView';
+import { OverviewView } from './components/OverviewView';
+import { MapView } from './components/MapView';
+import { PromptDialog } from './components/PromptDialog';
+import type { PromptRequest } from './components/PromptDialog';
+import { computeOverview } from './lib/overview';
+import { computeMap } from './lib/map';
 import { validateProject } from './lib/validate';
 import { computeFlow } from './lib/flow';
 
 type Selection =
+  | { type: 'welcome' }
+  | { type: 'overview' }
+  | { type: 'map' }
   | { type: 'config' }
   | { type: 'validation' }
   | { type: 'flow' }
@@ -38,11 +48,40 @@ export default function App() {
   const [project, setProject] = useState<DungeonProject | null>(null);
   const [kits, setKits] = useState<GlobalEntityFile[]>([]);
   const [mobTemplates, setMobTemplates] = useState<GlobalEntityFile[]>([]);
-  const [selection, setSelection] = useState<Selection>({ type: 'config' });
+  const [selection, setSelection] = useState<Selection>({ type: 'welcome' });
   const [error, setError] = useState<string | null>(null);
+  const [prompt, setPrompt] = useState<PromptRequest | null>(null);
 
   const validationIssues = useMemo(() => (project ? validateProject(project) : []), [project]);
   const flowNodes = useMemo(() => (project ? computeFlow(project) : []), [project]);
+  const overview = useMemo(() => (project ? computeOverview(project) : null), [project]);
+  const dungeonMap = useMemo(() => (project ? computeMap(project) : null), [project]);
+  const errorCount = validationIssues.filter((i) => i.severity === 'error').length;
+
+  // El diagrama muestra cuantas tareas tiene cada stage; la clave es el nombre de archivo sin extension.
+  const taskCounts = useMemo(() => {
+    const counts: Record<string, number> = {};
+    (project?.stages ?? []).forEach((stage) => {
+      counts[stage.fileName.replace(/\.ya?ml$/i, '')] = stage.tasks.length;
+    });
+    return counts;
+  }, [project]);
+
+  const openByFileId = (kind: 'stage' | 'level', id: string) => {
+    const list = kind === 'stage' ? project?.stages ?? [] : project?.levels ?? [];
+    const index = list.findIndex((f) => f.fileName.replace(/\.ya?ml$/i, '') === id);
+    if (index >= 0) setSelection({ type: kind, index });
+  };
+
+  const askName = (
+    title: string,
+    hint: string,
+    initial: string,
+    confirmLabel: string,
+    onConfirm: (value: string) => void
+  ) => {
+    setPrompt({ title, hint, label: 'Nombre del archivo', suffix: '.yml', initial, confirmLabel, onConfirm });
+  };
 
   const folderInputRef = useRef<HTMLInputElement>(null);
   const kitsInputRef = useRef<HTMLInputElement>(null);
@@ -52,7 +91,7 @@ export default function App() {
     try {
       const proj = await importDungeonFolder(fileList);
       setProject(proj);
-      setSelection({ type: 'config' });
+      setSelection({ type: 'overview' });
       setError(null);
     } catch (err) {
       setError('No se pudo importar la carpeta: ' + (err as Error).message);
@@ -90,48 +129,62 @@ export default function App() {
 
   const addLevel = () => {
     if (!project) return;
-    const name = window.prompt('Nombre del archivo (sin .yml):', 'nuevo_nivel');
-    if (!name) return;
-    setProject({ ...project, levels: [...project.levels, newEmptyFile(`${name}.yml`, 'level')] });
-    setSelection({ type: 'level', index: project.levels.length });
+    askName('Nuevo nivel', 'Los niveles agrupan scripts que valen para toda la partida.', 'nuevo_nivel', 'Crear nivel', (name) => {
+      setProject({ ...project, levels: [...project.levels, newEmptyFile(`${name}.yml`, 'level')] });
+      setSelection({ type: 'level', index: project.levels.length });
+    });
   };
 
   const addStage = () => {
     if (!project) return;
-    const name = window.prompt('Nombre del archivo (sin .yml):', 'nuevo_stage');
-    if (!name) return;
-    setProject({ ...project, stages: [...project.stages, newEmptyFile(`${name}.yml`, 'stage')] });
-    setSelection({ type: 'stage', index: project.stages.length });
+    askName('Nuevo stage', 'Un stage es una fase de la dungeon, con sus tareas y sus scripts.', 'nuevo_stage', 'Crear stage', (name) => {
+      setProject({ ...project, stages: [...project.stages, newEmptyFile(`${name}.yml`, 'stage')] });
+      setSelection({ type: 'stage', index: project.stages.length });
+    });
   };
 
   const addReward = () => {
     if (!project) return;
-    const name = window.prompt('Nombre del archivo (sin .yml):', 'nueva_recompensa');
-    if (!name) return;
-    setProject({ ...project, rewards: [...project.rewards, newRewardFile(`${name}.yml`)] });
-    setSelection({ type: 'reward', index: project.rewards.length });
+    askName('Nueva recompensa', 'Items y comandos que entrega la accion give_reward.', 'nueva_recompensa', 'Crear recompensa', (name) => {
+      setProject({ ...project, rewards: [...project.rewards, newRewardFile(`${name}.yml`)] });
+      setSelection({ type: 'reward', index: project.rewards.length });
+    });
   };
 
   const addLootChest = () => {
     if (!project) return;
-    const name = window.prompt('Nombre del archivo (sin .yml):', 'nuevo_cofre');
-    if (!name) return;
-    setProject({ ...project, lootChests: [...project.lootChests, newLootChestFile(`${name}.yml`)] });
-    setSelection({ type: 'lootchest', index: project.lootChests.length });
+    askName('Nuevo loot chest', 'Un cofre con items por peso, que llena la accion generate_loot.', 'nuevo_cofre', 'Crear cofre', (name) => {
+      setProject({ ...project, lootChests: [...project.lootChests, newLootChestFile(`${name}.yml`)] });
+      setSelection({ type: 'lootchest', index: project.lootChests.length });
+    });
   };
 
   const addKit = () => {
-    const name = window.prompt('Nombre del archivo (sin .yml):', 'nuevo_kit');
-    if (!name) return;
-    setKits([...kits, { fileName: `${name}.yml`, raw: { Name: name } }]);
-    setSelection({ type: 'kit', index: kits.length });
+    askName('Nuevo kit', 'Se guarda en kits/, fuera de la carpeta de la dungeon.', 'nuevo_kit', 'Crear kit', (name) => {
+      setKits([...kits, { fileName: `${name}.yml`, raw: { Name: name } }]);
+      setSelection({ type: 'kit', index: kits.length });
+    });
   };
 
   const addMobTemplate = () => {
-    const name = window.prompt('Nombre del archivo (sin .yml):', 'nuevo_mob');
-    if (!name) return;
-    setMobTemplates([...mobTemplates, { fileName: `${name}.yml`, raw: { EntityType: 'ZOMBIE' } }]);
-    setSelection({ type: 'mobtemplate', index: mobTemplates.length });
+    askName('Nuevo mob template', 'Se guarda en mobs/, fuera de la carpeta de la dungeon.', 'nuevo_mob', 'Crear mob', (name) => {
+      setMobTemplates([...mobTemplates, { fileName: `${name}.yml`, raw: { EntityType: 'ZOMBIE' } }]);
+      setSelection({ type: 'mobtemplate', index: mobTemplates.length });
+    });
+  };
+
+  const createDungeon = () => {
+    setPrompt({
+      title: 'Nueva dungeon',
+      hint: 'Es el nombre de la carpeta que se genera al exportar.',
+      label: 'Nombre de la dungeon',
+      initial: 'NuevaDungeon',
+      confirmLabel: 'Crear dungeon',
+      onConfirm: (name) => {
+        setProject(emptyProject(name));
+        setSelection({ type: 'config' });
+      },
+    });
   };
 
   return (
@@ -143,7 +196,16 @@ export default function App() {
           </div>
           <div>
             <h1 className="text-lg font-bold tracking-tight text-zinc-50">ADAForge</h1>
-            <p className="text-xs text-zinc-500">Editor visual para AdvancedDungeonArena - Fase 3</p>
+            <p className="text-xs text-zinc-500">
+              {project ? (
+                <>
+                  Editando <span className="text-zinc-300">{project.dungeonName}</span>
+                  {errorCount > 0 && <span className="text-red-400"> · {errorCount} error(es)</span>}
+                </>
+              ) : (
+                'Editor visual para AdvancedDungeonArena'
+              )}
+            </p>
           </div>
           <div className="flex-1" />
           <input
@@ -163,13 +225,7 @@ export default function App() {
             <FolderOpen size={15} /> Importar carpeta de dungeon
           </button>
           <button
-            onClick={() => {
-              const name = window.prompt('Nombre de la dungeon:', 'NuevaDungeon');
-              if (name) {
-                setProject(emptyProject(name));
-                setSelection({ type: 'config' });
-              }
-            }}
+            onClick={createDungeon}
             className="flex items-center gap-1.5 rounded-md bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 px-3 py-1.5 text-sm"
           >
             <Plus size={15} /> Nueva dungeon
@@ -193,6 +249,14 @@ export default function App() {
             <>
               <div>
                 <p className="text-xs uppercase tracking-wide text-zinc-500 font-semibold px-1 mb-1">{project.dungeonName}</p>
+                <button
+                  onClick={() => setSelection({ type: 'overview' })}
+                  className={`w-full flex items-center gap-2 rounded-md px-3 py-2 text-sm text-left ${
+                    selection.type === 'overview' ? 'bg-amber-500/15 text-amber-300' : 'text-zinc-300 hover:bg-zinc-900'
+                  }`}
+                >
+                  <LayoutDashboard size={15} /> Resumen
+                </button>
                 <button
                   onClick={() => setSelection({ type: 'config' })}
                   className={`w-full flex items-center gap-2 rounded-md px-3 py-2 text-sm text-left ${
@@ -220,7 +284,20 @@ export default function App() {
                     selection.type === 'flow' ? 'bg-amber-500/15 text-amber-300' : 'text-zinc-300 hover:bg-zinc-900'
                   }`}
                 >
-                  <GitBranch size={15} /> Flujo del dungeon
+                  <GitBranch size={15} /> Flujo de la dungeon
+                </button>
+                <button
+                  onClick={() => setSelection({ type: 'map' })}
+                  className={`w-full flex items-center gap-2 rounded-md px-3 py-2 text-sm text-left ${
+                    selection.type === 'map' ? 'bg-amber-500/15 text-amber-300' : 'text-zinc-300 hover:bg-zinc-900'
+                  }`}
+                >
+                  <MapIcon size={15} /> Mapa
+                  {dungeonMap && dungeonMap.outside.length > 0 && (
+                    <span className="ml-auto text-[10px] rounded-full bg-amber-500/20 text-amber-300 px-1.5 py-0.5">
+                      {dungeonMap.outside.length}
+                    </span>
+                  )}
                 </button>
               </div>
 
@@ -345,12 +422,25 @@ export default function App() {
         </aside>
 
         <main className="flex-1 min-w-0">
-          {!project && selection.type === 'config' && kits.length === 0 && mobTemplates.length === 0 && (
-            <div className="rounded-xl border border-dashed border-zinc-800 p-12 text-center text-zinc-500 text-sm">
-              Importá la carpeta completa de una dungeon, o creá una nueva, para empezar. También podés cargar Kits o
-              Mob Templates globales desde el panel de la izquierda sin necesidad de una dungeon abierta.
-            </div>
+          {selection.type === 'welcome' && (
+            <WelcomeView
+              onImport={() => folderInputRef.current?.click()}
+              onCreate={createDungeon}
+              onReference={() => setSelection({ type: 'reference' })}
+            />
           )}
+
+          {project && overview && dungeonMap && selection.type === 'overview' && (
+            <OverviewView
+              overview={overview}
+              issues={validationIssues}
+              map={dungeonMap}
+              dungeonName={project.dungeonName}
+              onGoTo={(view) => setSelection({ type: view })}
+            />
+          )}
+
+          {project && dungeonMap && selection.type === 'map' && <MapView map={dungeonMap} />}
 
           {selection.type === 'reference' && <ForkReferenceView />}
 
@@ -363,6 +453,8 @@ export default function App() {
               nodes={flowNodes}
               startStage={String(project.configRaw?.StartStage ?? '')}
               startLevel={String(project.configRaw?.StartLevel ?? '')}
+              taskCounts={taskCounts}
+              onOpen={openByFileId}
             />
           )}
           {project && selection.type === 'level' && project.levels[selection.index] && (
@@ -415,6 +507,8 @@ export default function App() {
           )}
         </main>
       </div>
+
+      <PromptDialog request={prompt} onClose={() => setPrompt(null)} />
     </div>
   );
 }

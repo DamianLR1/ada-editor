@@ -79,6 +79,8 @@ export function DynamicField({ field, value, allValues, onChange }: Props) {
 
       {field.type === 'map_string_list' && <MapStringListField value={value ?? {}} onChange={onChange} />}
 
+      {field.type === 'spawners' && <MapStringListField value={value ?? {}} onChange={onChange} keyPlaceholder="id_spawner" />}
+
       {field.type === 'map_text' && <MapTextField value={value ?? {}} onChange={onChange} />}
 
       {field.type === 'attribute_scale_map' && <AttributeScaleMapField value={value ?? {}} onChange={onChange} />}
